@@ -1,0 +1,7 @@
+---
+version: "3"
+services:
+  c19-dash:
+    ports:
+      - "80:80"
+    build: .
