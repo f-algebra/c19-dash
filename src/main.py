@@ -152,6 +152,7 @@ def foo(_, province: str, region: str):
 if not stored_data_files():
     fetch_data()
 
+timeloop.start()
 app = server
 
 if __name__ == '__main__':
