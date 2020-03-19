@@ -1,20 +1,18 @@
+import logging as log
+import os
+from datetime import datetime, timedelta
+from glob import glob
 from typing import List
 
 import dash
-from dash.dependencies import Input, Output
 import dash_core_components as dcc
 import dash_html_components as html
-import plotly.express as px
-import plotly.graph_objs as go
-from flask_caching import Cache
-import os
-
 import flask
 import pandas as pd
-import logging as log
-from timeloop import Timeloop
-from datetime import datetime, timedelta
-from glob import glob
+import plotly.express as px
+from dash.dependencies import Input, Output
+from flask_apscheduler import APScheduler
+from flask_caching import Cache
 
 EXTERNAL_STYLESHEETS = [
     'https://codepen.io/chriddyp/pen/bWLwgP.css'
@@ -22,7 +20,7 @@ EXTERNAL_STYLESHEETS = [
 
 DATA_CSV_URL = 'https://docs.google.com/spreadsheets/d/1D6okqtBS3S2NRC7GFVHzaZ67DuTw7LX49-fqSLwJyeo/export?format=csv'
 DATA_LINK_URL = 'https://docs.google.com/spreadsheets/d/1D6okqtBS3S2NRC7GFVHzaZ67DuTw7LX49-fqSLwJyeo'
-DATA_FETCH_INTERVAL = timedelta(minutes=10)
+DATA_FETCH_INTERVAL_SECONDS = timedelta(minutes=10).seconds
 DATE_COL = 'date_report'
 PROVINCE_COL = 'province'
 REGION_COL = 'health_region'
@@ -31,11 +29,16 @@ NONE_OPTION = dict(label=None, value=None)
 DATA_DIR = './data'
 
 log.basicConfig(level=log.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-timeloop = Timeloop()
 
 latest_df = None
 
 server = flask.Flask('app')
+server.config.from_mapping(dict(
+    SCHEDULER_API_ENABLED=True))
+
+scheduler = APScheduler()
+scheduler.init_app(server)
+scheduler.start()
 
 cache = Cache(app=server, config={
     'CACHE_TYPE': 'simple',
@@ -78,7 +81,7 @@ app.layout = html.Div([
 ], className="container")
 
 
-@timeloop.job(interval=DATA_FETCH_INTERVAL)
+@scheduler.task('interval', seconds=DATA_FETCH_INTERVAL_SECONDS)
 def fetch_data():
     df = pd.read_csv(DATA_CSV_URL, skiprows=2)
     assert (REQUIRED_COLS <= set(df.columns))
@@ -92,7 +95,7 @@ def fetch_data():
 
 
 def stored_data_files() -> List[str]:
-    return sorted(glob(os.path.join(DATA_DIR, '*.csv')))
+    return sorted(glob(os.path.join(DATA_DIR, '*.csv')), reverse=True)
 
 
 def get_df() -> pd.DataFrame:
@@ -152,8 +155,7 @@ def foo(_, province: str, region: str):
 if not stored_data_files():
     fetch_data()
 
-timeloop.start()
 app = server
 
 if __name__ == '__main__':
-    app.run(host='127.0.0.1', debug=True, port=80)
+    app.run(host='127.0.0.1', debug=False, port=8080)
