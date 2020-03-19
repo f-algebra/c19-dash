@@ -28,7 +28,7 @@ PROVINCE_COL = 'province'
 REGION_COL = 'health_region'
 REQUIRED_COLS = {DATE_COL, PROVINCE_COL, REGION_COL}
 NONE_OPTION = dict(label=None, value=None)
-DATA_DIR = r'.\data'
+DATA_DIR = './data'
 
 log.basicConfig(level=log.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 timeloop = Timeloop()
@@ -53,7 +53,9 @@ app.layout = html.Div([
         html.Div([html.Button('Reload Page', id='reload-button')], className='two columns')
     ], className='row'),
     html.Div([
-        html.Div([html.A('Data source', href=DATA_LINK_URL)]),
+        html.Div([
+            html.A('Data source', href=DATA_LINK_URL),
+            html.P(id='last-fetched')]),
     ], className='row'),
     html.Div([
         html.Div([
@@ -105,6 +107,13 @@ def build_options(items: List[str]) -> List[dict]:
     return [dict(label=opt, value=opt) for opt in sorted(list(set(items)))]
 
 
+@app.callback([Output('last-fetched', 'children')],
+              [Input('reload-button', 'n_clicks')])
+def foo(_):
+    last_mtime = datetime.fromtimestamp(os.path.getmtime(stored_data_files()[0]))
+    return ['(last fetched {} PST)'.format(last_mtime.strftime('%Y-%m-%d %H-%M-%S'))]
+
+
 @app.callback([Output('province-dropdown', 'options')],
               [Input('reload-button', 'n_clicks')])
 @cache.cached()
@@ -143,7 +152,6 @@ def foo(_, province: str, region: str):
 if not stored_data_files():
     fetch_data()
 
-# Expected by the Flask container
 app = server
 
 if __name__ == '__main__':

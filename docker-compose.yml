@@ -2,6 +2,10 @@
 version: "3"
 services:
   c19-dash:
+    environment:
+      TZ: 'Canada/Pacific'
+    volumes:
+      - './data:/app/data'
     ports:
       - "80:80"
     build: .
