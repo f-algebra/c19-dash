@@ -12,7 +12,6 @@ import pandas as pd
 import plotly.express as px
 from dash.dependencies import Input, Output
 from flask_apscheduler import APScheduler
-from flask_caching import Cache
 
 EXTERNAL_STYLESHEETS = [
     'https://codepen.io/chriddyp/pen/bWLwgP.css'
@@ -39,11 +38,6 @@ server.config.from_mapping(dict(
 scheduler = APScheduler()
 scheduler.init_app(server)
 scheduler.start()
-
-cache = Cache(app=server, config={
-    'CACHE_TYPE': 'simple',
-    'CACHE_DEFAULT_TIMEOUT': 0
-})
 
 app = dash.Dash(
     'app',
@@ -91,7 +85,6 @@ def fetch_data():
     log.info('Fetched {} rows'.format(len(df.index)))
     global latest_df
     latest_df = None
-    cache.clear()
 
 
 def stored_data_files() -> List[str]:
@@ -119,19 +112,16 @@ def foo(_):
 
 @app.callback([Output('province-dropdown', 'options')],
               [Input('reload-button', 'n_clicks')])
-@cache.cached()
 def foo(_):
     return [build_options(get_df()[PROVINCE_COL].values)]
 
 
 @app.callback([Output('region-dropdown', 'options'), Output('region-dropdown', 'value')],
               [Input('province-dropdown', 'value')])
-@cache.memoize()
 def foo(province: str):
     return [build_options(filtered_df(province=province)[REGION_COL].values), None]
 
 
-@cache.memoize()
 def filtered_df(province: str = None, region: str = None) -> pd.DataFrame:
     df = get_df()
     if province is not None:
