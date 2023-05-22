@@ -1,5 +1,5 @@
 dash==1.9.1
 pandas==1.0.3
-requests==2.23.0
+requests==2.31.0
 Flask-Caching==1.8.0
 Flask-APScheduler==1.11.0
